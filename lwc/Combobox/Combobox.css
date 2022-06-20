@@ -1,0 +1,22 @@
+div[aria-checked="true"] span.checked-icon lightning-icon {
+    display: inline-block !important;
+}
+
+div[aria-checked="false"] span.checked-icon lightning-icon {
+    display: none !important;
+}
+
+.slds-has-error .multiple-selection-container {
+    border-color: var(--slds-c-pill-error-text-color, var(--sds-c-pill-error-text-color, var(--lwc-colorTextError, rgb(234, 0, 30))))
+}
+
+.slds-has-error .slds-pill-customLabel {
+    font-weight: 400 !important;
+}
+div.slds-pill_container li[aria-selected="true"] {
+    /* display: flex !important; */
+}
+
+div.slds-pill_container li[aria-selected="false"] {
+    /* display: none !important; */
+}
