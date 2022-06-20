@@ -1,5 +1,7 @@
 # LWC-Combobox
-LWC based Combobox which provides Single/Multi Selection with Auto search capability, The component is built upon LWC framework and inhertis all the capability and design constraint from Lightning Design System for Combobox blueprint-https://www.lightningdesignsystem.com/components/combobox/, This work is inspired from the LWC Base-Combobox Implementation https://github.com/salesforce/base-components-recipes/tree/master/force-app/main/default/lwc/baseCombobox
+LWC based Combobox which provides Single/Multi Selection with Auto search capability, The component is built upon LWC framework and inhertis all the capability and design constraint from Lightning Design System for Combobox blueprint-https://www.lightningdesignsystem.com/components/combobox/
+
+This work is inspired from the LWC Base-Combobox Implementation https://github.com/salesforce/base-components-recipes/tree/master/force-app/main/default/lwc/baseCombobox
 ## Features
 This new LWC native Combobox supports and provides following features-
 1. **Native SLDS Support** - The component is written by using native Lightning design system styling, Thus the component will be rendered with the exact styling as described in the Combobox blueprint of SLDS,(https://www.lightningdesignsystem.com/components/combobox/)
