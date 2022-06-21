@@ -42,7 +42,7 @@ This Combobox component comes with following supported attributes and Events and
 | `variant` | No | The variant changes the appearance of the combobox. Accepted variants include `standard`, `label-hidden`, `label-inline`. Use `label-hidden` to hide the label but make it available to assistive technology. Use `label-inline` to horizontally align the label and combobox. Use `standard` to place the label above the combobox as in stacked position.| `standard` |
 | `placeholder` | No | To display default placeholder on the Combobox, It accepts `string`  |  |
 
-### Supproted Events
+### Supported Events
 Following Events are supported by the Combobox
 1. **`onchange` Event**:
 This event will be triggered whenever we update the Combobox selection. You can listen to this event from your parent component. To refer the updated value use `event.detail.value` from the `event` object.
