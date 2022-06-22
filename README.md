@@ -42,7 +42,7 @@ This Combobox component comes with following supported attributes and Events and
 | `variant` | No | The variant changes the appearance of the combobox. Accepted variants include `standard`, `label-hidden`, `label-inline`. Use `label-hidden` to hide the label but make it available to assistive technology. Use `label-inline` to horizontally align the label and combobox. Use `standard` to place the label above the combobox as in stacked position.| `standard` |
 | `placeholder` | No | To display default placeholder on the Combobox, It accepts `string`  |  |
 | `field-level-help` | No | To display help text for the Combobox field, the help text will be displayed in the format of tooltip |  |
-
+| `validation` | No | To pass custom validation rules to execute for validation of input data, refer below link for more detail: https://github.com/NPSINGH/LWC-Combobox/blob/main/README.md#validation-through-validation-attribute |  |
 ### Supported Events
 Following Events are supported by the Combobox
 1. **`onchange` Event**:
