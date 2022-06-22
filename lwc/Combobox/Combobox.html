@@ -6,6 +6,9 @@
                 <abbr class="slds-required" title="required">* </abbr>
             </template>
             {comboboxObj.label}</label>
+        <template if:true={comboboxObj._showHelpText}>
+            <lightning-helptext content={comboboxObj.helpText}></lightning-helptext>
+        </template>
         <div class="slds-form-element__control">
             <!-- hidden the input if focus loose -->
             <template if:false={comboboxObj._autoHideInput}>
