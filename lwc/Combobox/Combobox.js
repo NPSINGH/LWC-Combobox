@@ -1,6 +1,6 @@
 import { LightningElement, track, api } from 'lwc';
-import {uniqueStrGenerator,deepClone} from 'c/Util';
-import {evaluateExpression,syncComboboxAttributes,handleSelectionRemovalAction,clearSelectionOnAutocomplete,handleKeyUpOnInput,handleOptionClickAction,handleOptionHoverAction,handleDropdownOnInputClick,handleKeyDownOnInput,openAndCloseDropdown,preventAndStopEvent} from './ComboboxHelper';
+import {uniqueStrGenerator,deepClone} from 'c/cpi_CommonJSComp';
+import {evaluateExpression,syncComboboxAttributes,handleSelectionRemovalAction,clearSelectionOnAutocomplete,handleKeyUpOnInput,handleOptionClickAction,handleOptionHoverAction,handleDropdownOnInputClick,handleKeyDownOnInput,openAndCloseDropdown,preventAndStopEvent} from './cpi_ComboboxHelper';
 const SEPERATOR = ';',
       MAX_OPTION_DISPLAY = 3,
       VALIDATION = [{name:"REQUIRED",condition:"(value === null || value === undefined || (typeof value === 'string' && value.trim() === '')) ? true : false",message:"Complete this field",custom:false}];
@@ -13,15 +13,16 @@ uniqueId = uniqueStrGenerator(); // generate this Id to use in the attribute map
     readOnly: false,
     multiselect: false,
     autocomplete: false,
-    required: false,
     label: '',
     name: '',
     placeholder: '',
     hasError: false,
     errorMsg: '',
+    helpText: '',
     options:[],
     dropdownList:[],
 
+    _required: false,
     _value: '',
     _hasFocus: false,
     _isDropdownVisibile: false,
@@ -33,6 +34,16 @@ uniqueId = uniqueStrGenerator(); // generate this Id to use in the attribute map
     _searchTerm: '',
     _disabled: false,
 
+    get required(){
+        return this._required;
+    },
+    set required(value){
+        this._required = value;
+        this.compObj.runValidationRules();
+    },
+    get _showHelpText(){
+        return this.helpText ? true : false;
+    },
     get _builtInValidation(){
         let _validations = [];
         if(this.required) {
@@ -84,24 +95,13 @@ uniqueId = uniqueStrGenerator(); // generate this Id to use in the attribute map
         else{
             valueList = value.split(SEPERATOR);
         }
-
-        if(this.options && this.options.length > 0){
-            this.options.forEach(opt => {
-                if(valueList.includes(opt.value)){
-                    opt.selected = true;
-                }
-                else{
-                    opt.selected = false;
-                }
-            });
-        }
         if(this._value != valueList.join(SEPERATOR)){
             // dispatch Change Event
             this._value = valueList.join(SEPERATOR);
             this.compObj.dispatchChangeEvent(this._value);
 
             // check for validation Rules
-            this.compObj.validationRules();
+            this.compObj.runValidationRules();
         }
     },
     get _valueDisplay(){
@@ -173,6 +173,21 @@ set name(value){
     this.comboboxObj.name = value;
 }
 
+@api get validation(){
+    return VALIDATION;
+}
+set validation(value){
+    if(typeof value === 'object' && value.length > 0){
+        let rules = deepClone(value);
+        this.prepareValidationRules(rules);
+        // run the rules
+        this.runValidationRules();
+    }
+    else{
+        console.warn('An Empty object passed in Combobox[validation] attribute, please check the passed "validation" parameter');
+    }
+}
+
 @api get disabled(){
     this.comboboxObj._disabled;
 }
@@ -187,6 +202,13 @@ set disabled(value){
 set required(value){
     value = typeof value  === 'string' ? value.toLowerCase() === 'true' ? true : false : value ? value : false;
     this.comboboxObj.required = value;
+}
+
+@api get fieldLevelHelp(){
+    return this.comboboxObj.helpText;
+}
+set fieldLevelHelp(value){
+    this.comboboxObj.helpText = value;
 }
 
 @api get autocomplete(){
@@ -222,7 +244,7 @@ set options(value){
         this.comboboxObj.dropdownList = deepClone(this.comboboxObj.options);
     }
     else{
-        console.error('Supplied option list is not a proper Array object');
+        console.warn('An Empty object passed in Combobox[options] attribute, please check the passed "options" parameter');
     }
 }
 
@@ -253,7 +275,7 @@ set value(value){
 
 // @api methods 
 @api checkValidity(){
-    return this.validationRules();
+    return !this.runValidationRules();
 }
 
 @api setCustomValidity(message,condition = 'true'){
@@ -359,14 +381,24 @@ handleSelectionRemoval(event){
 }
 
 prepareDropdownOptionList(options){
+    const comboboxObj = this.comboboxObj;
     for(let obj of options){
         obj.label = obj.label ? obj.label : '';
         obj.value = obj.value ? obj.value : '';
         obj.description = obj.description ? obj.description : '';
-        obj.selected = obj.selected ? obj.selected : false;
+        //obj.selected = obj.selected ? obj.selected : false;
         // automated properties for dropdown options
         Object.defineProperty(obj, '_id', {
             value: uniqueStrGenerator()
+        });
+        Object.defineProperty(obj, 'selected', {
+            get(){
+                let val = false;
+                if(comboboxObj.value){
+                    val = comboboxObj.value.split(';').includes(this.value);
+                }
+                return val;
+            }
         });
     }
     return options;
@@ -384,10 +416,37 @@ setCustomErrorMessage(msg,cond){
     }
 
     // run the validation rules
-    this.validationRules();
+    this.runValidationRules();
 }
 
-validationRules(){
+prepareValidationRules(ruleObj){
+    if(ruleObj && ruleObj.length > 0){
+        for (const rule of ruleObj){
+            if(rule.condition && rule.message){
+                const dataObj = this.customValidationRuleObj(rule);
+                const objIndex = VALIDATION.findIndex(obj => obj.name === dataObj.name);
+                // if an existing rule found replace it
+                if(objIndex > -1){
+                    VALIDATION[objIndex] = dataObj;
+                }
+                else{
+                    VALIDATION.push(dataObj);
+                }
+            }
+        }
+    }
+}
+
+customValidationRuleObj(dataObj){
+    let ruleObj = {};
+    ruleObj.name = ('name' in dataObj) ? dataObj.name ? dataObj.name : uniqueStrGenerator() : uniqueStrGenerator();
+    ruleObj.condition = dataObj.condition;
+    ruleObj.message = dataObj.message;
+    ruleObj.custom = true;
+    return ruleObj;
+}
+
+runValidationRules(){
     const errorObj = VALIDATION;
     const value = this.comboboxObj.value;
     if(errorObj && errorObj.length > 0){
