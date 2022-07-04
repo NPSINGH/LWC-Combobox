@@ -23,11 +23,19 @@ export const openAndCloseDropdown = (opr = 'close',compObj)=>{
             }
             // add the expend attribute as true
             element.setAttribute('aria-expanded','false');
-            compObj.comboboxObj._isDropdownVisibile = false;
+            compObj.comboboxObj._isDropdownVisibile = false;            
             compObj.comboboxObj._searchTerm = ''; // reset search term
+            // reset the dropdown list 
+            compObj.comboboxObj.options = compObj.comboboxObj.dropdownList;
             // remove highlighted option
-            removeHighlightSelection(template);
-            resetDropdownVisibility(template);
+            let listElements = template.querySelectorAll('div[role="option"]');
+            if(listElements.length > 0){
+                listElements.forEach(ele => {
+                    ele.setAttribute('aria-selected','false');
+                    ele.classList.remove('slds-has-focus');
+                    ele.classList.remove('slds-hide')
+                });
+            }
         }
     }
 }
@@ -118,6 +126,8 @@ export function handleOptionHoverAction(event,compObj){
 
 export function clearSelectionOnAutocomplete(compObj){
     populateValueOnInput('',compObj.comboboxObj); // set value to null
+    // reset the dropdown list 
+    compObj.comboboxObj.options = compObj.comboboxObj.dropdownList;
     // if dropdown is not visible then show the dropdown
     if(!compObj.comboboxObj._isDropdownVisibile){
         resetDropdownOptions(compObj.template);
@@ -152,24 +162,15 @@ const eventKeyToHandlerMap = {
     Delete: handleBackspaceOrDeleteKey
 };
 
-function resetDropdownVisibility(template){
-    const listElements = template.querySelectorAll('div[role="option"]');
-    if(listElements.length > 0){
-        for(let index=0; index < listElements.length; index++){
-            listElements[index].classList.remove('slds-hide');
-        }
-    }
-}
-
 function resetDropdownOptions(template){
     const listElements = template.querySelectorAll('div[role="option"]');
-    if(listElements.length > 0){
-        for(let index=0; index < listElements.length; index++){
-            listElements[index].classList.remove('slds-hide');
-            listElements[index].classList.remove('slds-has-focus');
-            listElements[index].setAttribute('aria-selected','false');
-            listElements[index].setAttribute('aria-checked','false');
-        }
+    if(listElements.length > 0){ 
+        listElements.forEach(ele => {
+            ele.classList.remove('slds-hide');
+            ele.classList.remove('slds-has-focus');
+            ele.setAttribute('aria-selected','false');
+            ele.setAttribute('aria-checked','false');
+        });
     }
 }
 
@@ -195,35 +196,22 @@ function handleEscapeOrTabKey(event,compObj){
 }
 
 function filterDropdownList(event,compObj){
+    // check for the dropdown if dropdown is off bring the dropdown
+    if(!compObj.comboboxObj._isDropdownVisibile){
+        openAndCloseDropdown('open',compObj);
+    }
     // get the value of the input
     const template = compObj.template;
     const searchTerm = event.target.value;
     compObj.comboboxObj._searchTerm = searchTerm;
-    // filter the dropdown list based on user Input
-    const listElements = template.querySelectorAll('div[role="option"]');
-    if(listElements.length > 0){
-        for(let index=0; index < listElements.length; index++){
-            // get the current searched input
-            if(listElements[index].dataset.label.toLowerCase().includes(searchTerm.toLowerCase())){
-                listElements[index].classList.remove('slds-hide');
-            }
-            else{
-                listElements[index].classList.add('slds-hide');
-            }
-        }
-    }
+    compObj.comboboxObj.options = compObj.comboboxObj.dropdownList.filter(ele => ele.label.toLowerCase().includes(searchTerm.toLowerCase()));
 }
 
 function findCurrentHoverIndex(template){
     // serach for hover selection index
     const listElements = template.querySelectorAll('div[role="option"]');
     if(listElements.length > 0){
-       // return listElements.findIndex(optEle=>optEle.getAttribute('aria-selected=') == 'true');
-        for(let index=0; index < listElements.length; index++){
-            if(listElements[index].getAttribute('aria-selected') === 'true'){
-                return index;
-            }
-        }
+       return [...listElements].findIndex(ele => ele.getAttribute('aria-selected') === 'true');
     }
     return -1;
 }
@@ -232,12 +220,7 @@ function findCurrentSelectedIndex(template){
     // serach for selected option index
     const listElements = template.querySelectorAll('div[role="option"]');
     if(listElements.length > 0){
-       // return listElements.findIndex(optEle=>optEle.getAttribute('aria-selected=') == 'true');
-        for(let index=0; index < listElements.length; index++){
-            if(listElements[index].getAttribute('aria-checked') === 'true'){
-                return index;
-            }
-        }
+        return [...listElements].findIndex(ele => ele.getAttribute('aria-checked') === 'true');
     }
     return -1;
 }
@@ -258,7 +241,7 @@ function handleEnterKey(event,compObj){
         currentIndex = currentIndex < 0 ? 0 : currentIndex;
         highlightSelection(currentIndex,template);
         // get element By Index and then scroll to current position
-        const scrollTo = getOptionElementByIndex(nextIndex,template);
+        const scrollTo = getOptionElementByIndex(currentIndex,template);
         const parentEle = template.querySelector('div[role="listbox"]');
         scrollIntoViewIfNeeded(scrollTo,parentEle);
     }
@@ -280,11 +263,7 @@ function getOptionElementIndexById(elementId,template){
     const listElements = template.querySelectorAll('div[role="option"]');
     if(listElements.length > 0){
        // return listElements.findIndex(optEle=>optEle.getAttribute('aria-selected=') == 'true');
-        for(let index=0; index < listElements.length; index++){
-            if(listElements[index].getAttribute('id') === elementId){
-                return index;
-            }
-        }
+       return [...listElements].findIndex(ele => ele.getAttribute('id') === elementId);
     }
     return -1;
 }
