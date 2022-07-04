@@ -239,9 +239,8 @@ set placeholder(value){
 }
 set options(value){
     if(typeof value === 'object' && value.length > 0){
-        let dataOptions = deepClone(value);
-        this.comboboxObj.options = this.prepareDropdownOptionList(dataOptions);
-        this.comboboxObj.dropdownList = deepClone(this.comboboxObj.options);
+	  this.comboboxObj.options = this.prepareDropdownOptionList(deepClone(value));
+        this.comboboxObj.dropdownList =  this.prepareDropdownOptionList(deepClone(value));
     }
     else{
         console.warn('An Empty object passed in Combobox[options] attribute, please check the passed "options" parameter');
