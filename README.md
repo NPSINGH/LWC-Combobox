@@ -40,9 +40,9 @@ This Combobox component comes with following supported attributes and Events and
 | `disabled` | No | To specify the Combobox disable state, if `true` then the Combobox will be in disabled state  | `false` |
 | `read-only` | No | To specify the Combobox readonly state, if `true` then the Combobox will be in readonly state | `false` |
 | `variant` | No | The variant changes the appearance of the combobox. Accepted variants include `standard`, `label-hidden`, `label-inline`. Use `label-hidden` to hide the label but make it available to assistive technology. Use `label-inline` to horizontally align the label and combobox. Use `standard` to place the label above the combobox as in stacked position.| `standard` |
-| `placeholder` | No | To display default placeholder on the Combobox, It accepts `string`  |  |
-| `field-level-help` | No | To display help text for the Combobox field, the help text will be displayed in the format of tooltip |  |
-| `validation` | No | To pass custom validation rules to execute for validation of input data, refer below link for more detail: https://github.com/NPSINGH/LWC-Combobox/blob/main/README.md#validation-through-validation-attribute |  |
+| `placeholder` | No | To display default placeholder on the Combobox, It accepts `string`.  |  |
+| `field-level-help` | No | To display help text for the Combobox field, the help text will be displayed in the format of tooltip. |  |
+| `validation` | No | To pass custom validation rules to execute for validation of input data, refer [Validation through validation Attribute](#validation-through-validation-attribute) section for more detail. |  |
 ### Supported Events
 Following Events are supported by the Combobox
 1. **`onchange` Event**:
@@ -75,7 +75,7 @@ Following Methods are supported by the Combobox
       }
   }
   ```
-  For more information about validation through `setCustomValidity` method, refer below section.
+  For more information about validation through `setCustomValidity` method, refer [Validation through setCustomValidity method](#validation-through-setcustomvalidity-method) section.
   
   #### Validation Handler Logic
   Component supports dynamic and custom validation through a specific js `object` and `setCustomValidity` method. You can prepare your custom validations and pass pass that `Array object` as in `validation` attribute or you can use `setCustomValidity` method and perform the validation dynamically on the fly from your parent component.
@@ -101,12 +101,12 @@ Following Methods are supported by the Combobox
   <!-- in HTML -->
   <c-combobox label="Select List" options={options} onchange={handleSelectChange} validation={validationObj}></c-combobox>
   ```
-  **Component parse the validation object and if there are validation with the same name it will be replaced in the array object**
+  > Component parse the validation object and if there are validation with the same name it will be replaced in the array object
   
  ##### Validation through `setCustomValidity` method:
  if you want to perform a dynamic validation on the fly from your parent component you can call this method and pass two parameters, the second parameter is an optional parameter where you would pass the condition, if you don't pass anything the message you try to display as an error which rendered immedietly without any condition check.
  
- **An example of code for immediate message display without condition:**
+ > An example of code for immediate message display without condition:
   ```
   handleSelectedOption(event){
       console.log('EVENT FIRED!!! Selected Value: '+event.detail.value);
@@ -118,7 +118,7 @@ Following Methods are supported by the Combobox
       }
   }
   ```  
-  **An example of code for display message based on condition eval:**
+  > An example of code for display message based on condition eval: 
   ```
   renderedCallback(){
       const element = this.template.querySelector('c-combobox');
