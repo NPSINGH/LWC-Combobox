@@ -4,7 +4,7 @@ import {evaluateExpression,syncComboboxAttributes,handleSelectionRemovalAction,c
 const SEPERATOR = ';',
       MAX_OPTION_DISPLAY = 3,
       VALIDATION = [{name:"REQUIRED",condition:"(value === null || value === undefined || (typeof value === 'string' && value.trim() === '')) ? true : false",message:"Complete this field",custom:false}];
-export default class Cpi_Combobox extends LightningElement {
+export default class Combobox extends LightningElement {
 uniqueId = uniqueStrGenerator(); // generate this Id to use in the attribute mapping
 
 @track comboboxObj = {
