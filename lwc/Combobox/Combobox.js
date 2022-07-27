@@ -4,7 +4,7 @@ import {evaluateExpression,syncComboboxAttributes,handleSelectionRemovalAction,c
 const SEPERATOR = ';',
       MAX_OPTION_DISPLAY = 3,
       VALIDATION = [{name:"REQUIRED",condition:"(value === null || value === undefined || (typeof value === 'string' && value.trim() === '')) ? true : false",message:"Complete this field",custom:false}];
-export default class Combobox extends LightningElement {
+export default class Cpi_Combobox extends LightningElement {
 uniqueId = uniqueStrGenerator(); // generate this Id to use in the attribute mapping
 
 @track comboboxObj = {
@@ -39,7 +39,9 @@ uniqueId = uniqueStrGenerator(); // generate this Id to use in the attribute map
     },
     set required(value){
         this._required = value;
-        this.compObj.runValidationRules();
+        if(this.compObj._connected){
+            this.compObj.runValidationRules();
+        }
     },
     get _showHelpText(){
         return this.helpText ? true : false;
@@ -101,7 +103,9 @@ uniqueId = uniqueStrGenerator(); // generate this Id to use in the attribute map
             this.compObj.dispatchChangeEvent(this._value);
 
             // check for validation Rules
-            this.compObj.runValidationRules();
+            if(this.compObj._connected){
+                this.compObj.runValidationRules();
+            }
         }
     },
     get _valueDisplay(){
@@ -157,6 +161,7 @@ uniqueId = uniqueStrGenerator(); // generate this Id to use in the attribute map
     }
 }
  _cancelBlur = false;
+ _connected = false;
 
 // @api properties
 @api get label(){
@@ -239,7 +244,7 @@ set placeholder(value){
 }
 set options(value){
     if(typeof value === 'object' && value.length > 0){
-	  this.comboboxObj.options = this.prepareDropdownOptionList(deepClone(value));
+        this.comboboxObj.options = this.prepareDropdownOptionList(deepClone(value));
         this.comboboxObj.dropdownList =  this.prepareDropdownOptionList(deepClone(value));
     }
     else{
@@ -285,6 +290,7 @@ set value(value){
  
 connectedCallback(){
     //console.log('In Combobox connected Callback');
+    this._connected = true;
 }
 
 handleLabelClick(event){
@@ -302,6 +308,7 @@ handleSelectInputBlur(event){
         return;
     }
     this.comboboxObj._hasFocus = false;
+    this.runValidationRules();
     openAndCloseDropdown('close',this);
 }
 
@@ -477,15 +484,17 @@ renderedCallback(){
 
 // dispatch events for the parent component
 dispatchChangeEvent(data){
-    const dataValue = data;
-    this.dispatchEvent(
-        new CustomEvent('change', {
-            composed: true,
-            bubbles: true,
-            detail: {
-                value: dataValue
-            }
-        })
-    );
+    if(this._connected){
+        const dataValue = data;
+        this.dispatchEvent(
+            new CustomEvent('change', {
+                composed: true,
+                bubbles: true,
+                detail: {
+                    value: dataValue
+                }
+            })
+        );
+    }
 }
 }
