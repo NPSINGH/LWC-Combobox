@@ -400,7 +400,7 @@ prepareDropdownOptionList(options){
             get(){
                 let val = false;
                 if(comboboxObj.value){
-                    val = comboboxObj.value.split(';').includes(this.value);
+                    val = comboboxObj.value.split(SEPERATOR).includes(this.value.toString()); // Check values with string comparison
                 }
                 return val;
             }
