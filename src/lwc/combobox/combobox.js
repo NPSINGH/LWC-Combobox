@@ -68,6 +68,9 @@ uniqueId = uniqueStrGenerator(); // generate this Id to use in the attribute map
     get disabled(){
         return this.readOnly || this._disabled;
     },
+    set disabled(value) {
+        this._disabled = value;
+    },
     get _autoHideInput(){
         return this.autocomplete && this.multiselect && !this._hasFocus && this._selectedOptions.length > 0 && !this.hasError ? true : false;
     },
@@ -94,7 +97,7 @@ uniqueId = uniqueStrGenerator(); // generate this Id to use in the attribute map
             }
         }
         else{
-            valueList = value.split(SEPERATOR);
+            valueList = typeof value == 'string' ? value.split(SEPERATOR):value.toString().split(SEPERATOR);
         }
         if(this._value != valueList.join(SEPERATOR)){
             // dispatch Change Event
@@ -197,7 +200,8 @@ set validation(value){
 }
 set disabled(value){
     value = typeof value  === 'string' ? value.toLowerCase() === 'true' ? true : false : value ? value : false;
-    this.comboboxObj._disabled = value;
+    this.comboboxObj.disabled = value;
+    syncComboboxAttributes(this);
 }
 
 @api get required(){
@@ -271,9 +275,7 @@ set variant(value){
     return this.comboboxObj.value;
 }
 set value(value){
-    if(value){
-        this.comboboxObj.value = value; 
-    }
+    this.comboboxObj.value = value;
 }
 
 // @api methods 
@@ -400,7 +402,7 @@ prepareDropdownOptionList(options){
             get(){
                 let val = false;
                 if(comboboxObj.value){
-                    val = comboboxObj.value.split(SEPERATOR).includes(this.value.toString()); // Check values with string comparison
+                    val = comboboxObj.value.split(SEPERATOR).includes(this.value.toString());
                 }
                 return val;
             }
