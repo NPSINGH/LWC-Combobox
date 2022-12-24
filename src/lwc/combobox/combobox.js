@@ -1,8 +1,12 @@
 import { LightningElement, track, api } from 'lwc';
 import {uniqueStrGenerator,deepClone,evaluateExpression,syncComboboxAttributes,handleSelectionRemovalAction,clearSelectionOnAutocomplete,handleKeyUpOnInput,handleOptionClickAction,handleOptionHoverAction,handleDropdownOnInputClick,handleKeyDownOnInput,openAndCloseDropdown,preventAndStopEvent} from './comboboxHelper';
 const SEPERATOR = ';',
-      MAX_OPTION_DISPLAY = 3,
-      VALIDATION = [{name:"REQUIRED",condition:"(value === null || value === undefined || (typeof value === 'string' && value.trim() === '')) ? true : false",message:"Complete this field",custom:false}];
+    MAX_OPTION_DISPLAY = 3,
+    DEFAULT_SEARCH_TEXT = "Start typing to search.",
+    NO_MATCH_FOUND = "No results for ",
+    LOADING_TEXT = 'Please Wait...',
+    RESTRICT_OBJECT_KEYS = ['label', 'value', '_label'],
+    VALIDATION = [{ name: "REQUIRED", condition: "(value === null || value === undefined || (typeof value === 'string' && value.trim() === '')) ? true : false", message: "Complete this field", custom: false }];
 export default class Combobox extends LightningElement {
 uniqueId = uniqueStrGenerator(); // generate this Id to use in the attribute mapping
 
@@ -11,7 +15,6 @@ uniqueId = uniqueStrGenerator(); // generate this Id to use in the attribute map
     variant: 'standard',
     readOnly: false,
     multiselect: false,
-    autocomplete: false,
     label: '',
     name: '',
     placeholder: '',
@@ -20,9 +23,10 @@ uniqueId = uniqueStrGenerator(); // generate this Id to use in the attribute map
     helpText: '',
     options:[],
     dropdownList:[],
+    lazySearch: false,
+    isLoading: false,
 
     _required: false,
-    _value: '',
     _hasFocus: false,
     _isDropdownVisibile: false,
     _cbIdAttr: 'combobox-id-'+this.uniqueId,
@@ -32,7 +36,25 @@ uniqueId = uniqueStrGenerator(); // generate this Id to use in the attribute map
     _fieldErrorIdAttr: 'field-error-id-'+this.uniqueId,
     _searchTerm: '',
     _disabled: false,
+    _autocomplete: false,
+    _isValueObj: false,
+    _selectedValues: [],
 
+    get _showSearchText() {
+        if (this.lazySearch && !(this.options && this.options.length > 0)) {
+            return true;
+        }
+        return false;
+    },
+    get _defaultSearchText() {
+        return this.isLoading ? LOADING_TEXT : this._searchTerm ? NO_MATCH_FOUND + '"' + this._searchTerm + '"' : DEFAULT_SEARCH_TEXT;
+    },
+    get autocomplete() {
+        return this._autocomplete || this.lazySearch;
+    },
+    set autocomplete(value) {
+        this._autocomplete = value;
+    },
     get required(){
         return this._required;
     },
@@ -53,17 +75,10 @@ uniqueId = uniqueStrGenerator(); // generate this Id to use in the attribute map
         return _validations;
     },
     get _selectedOptions(){
-        let selectedOptions = [];
-        if(this.options && this.options.length > 0){
-            selectedOptions = this.options.filter(opt => opt.selected === true);
-        }
-        return selectedOptions;
+        return this._selectedValues;
     },
     get _showPillSelector(){
         return this.multiselect && this.autocomplete && this._selectedOptions.length > 0 ? true : false;
-    },
-    get value(){
-        return this._value;
     },
     get disabled(){
         return this.readOnly || this._disabled;
@@ -74,35 +89,67 @@ uniqueId = uniqueStrGenerator(); // generate this Id to use in the attribute map
     get _autoHideInput(){
         return this.autocomplete && this.multiselect && !this._hasFocus && this._selectedOptions.length > 0 && !this.hasError ? true : false;
     },
-    set value(value){
-        if(!value){
-            value = '';
+    get value() {
+        return this._isValueObj ? this._selectedValues : this._value;
+    },
+    set value(val) {
+        if (!val) {
+            val = [];
         }
-        let valueList = [];
-        if(this._value && this.multiselect){
-            if(value){
-                let existingValues = this._value.split(SEPERATOR);
-                const index = existingValues.indexOf(value);
-                // check if the supplied value already exist in the collection
-                if (index > -1) {//if multiselect then remove the existing one
-                    existingValues.splice(index, 1);
-                }
-                else{
-                    existingValues.push(value);
-                }
-                valueList = existingValues;
+        if (typeof val === 'object') {
+            val = deepClone(val);
+        }
+        else {
+            if (typeof val === 'string' && val.trim() === '') {
+                val = new Array();
             }
-            else{
-                valueList = value.split(SEPERATOR);
+            else {
+                // parse for JSON
+                try {
+                    val = JSON.parse(val);
+                    // check if val is an object
+                    if (typeof val === 'object') {
+                        this._isValueObj = true; // set value as an object
+                    }
+                    else {
+                        val = this.compObj.convertToObject(val.toString());
+                    }
+                }
+                catch (e) {
+                    this._isValueObj = false;
+                    console.warn('Supplied value is not a valid Object. Converting to JS Object');
+                    val = this.compObj.convertToObject(val); // convert to object with label/value pair
+                }
             }
         }
-        else{
-            valueList = typeof value == 'string' ? value.split(SEPERATOR):value.toString().split(SEPERATOR);
+        // if the value already exist remove it
+        let valueList = []; 
+        if (!Array.isArray(val) || (Array.isArray(val) && val.length > 0)) {
+            if (this._selectedValues.length > 0) {
+                if (this.multiselect) {
+                    // search for the existing value if any
+                    valueList = deepClone(this._selectedValues);
+                    const valueIndex = valueList.findIndex(ele => ele.value === val.value);
+                    if (valueIndex > -1) {
+                        valueList.splice(valueIndex, 1); // splice the element
+                    }
+                    else {
+                        valueList.push(val);
+                    }
+                }
+                else {
+                    valueList = Array.isArray(val) ? val : [...valueList, val];
+                }
+            }
+            else {
+                valueList = Array.isArray(val) ? val : [...valueList, val];
+            }
         }
-        if(this._value != valueList.join(SEPERATOR)){
-            // dispatch Change Event
-            this._value = valueList.join(SEPERATOR);
-            this.compObj.dispatchChangeEvent(this._value);
+
+        if (!compareArrayObject(valueList, this._selectedValues)) { // if the values are not same
+            valueList = this.compObj.prepareSelectedValueList(valueList);
+            this._selectedValues = valueList;
+            this.compObj.dispatchChangeEvent(this._value, valueList);
 
             // check for validation Rules
             if(this.compObj._connected){
@@ -120,16 +167,19 @@ uniqueId = uniqueStrGenerator(); // generate this Id to use in the attribute map
 
         //else if ()
         let valueDisplay = '';
-        let selectedOptions = this._selectedOptions;
+        let selectedOptions = this._selectedValues;
         if(selectedOptions && selectedOptions.length > 0){
             if(selectedOptions.length > MAX_OPTION_DISPLAY){
                 valueDisplay = selectedOptions.length + ' options selected';
             }
             else{
-                valueDisplay = selectedOptions.map(data=> data.label).join(SEPERATOR);
+                valueDisplay = selectedOptions.map(data => data.label).join(SEPERATOR);
             }
         }
         return valueDisplay;
+    },
+    get _value() {
+        return this._selectedValues ? this._selectedValues.map(obj => obj.value).join(SEPERATOR) : '';
     },
     get _clearMode(){
         return this.autocomplete && (this.value && this.value.length > 0 && !this.multiselect) ? true : false;
@@ -166,6 +216,14 @@ uniqueId = uniqueStrGenerator(); // generate this Id to use in the attribute map
  _connected = false;
 
 // @api properties
+    @api get lazySearch() {
+        return this.comboboxObj.lazySearch;
+    }
+    set lazySearch(value) {
+        value = typeof value === 'string' ? value.toLowerCase() === 'true' ? true : false : value ? value : false;
+        this.comboboxObj.lazySearch = value;
+    }
+
 @api get label(){
     this.comboboxObj.label;
 }
@@ -275,19 +333,66 @@ set variant(value){
     return this.comboboxObj.value;
 }
 set value(value){
+    if (typeof value !== 'string') {
+        this.comboboxObj._isValueObj = true;
+    }
+    else {
+        this.comboboxObj._isValueObj = false;
+    }
     this.comboboxObj.value = value;
 }
 
 // @api methods 
-@api checkValidity(){
-    return !this.runValidationRules();
-}
+    @api checkValidity() {
+        return !this.runValidationRules();
+    }
 
-@api setCustomValidity(message,condition = 'true'){
-    this.setCustomErrorMessage(message,condition);
-}
+    @api setCustomValidity(message, condition = 'true') {
+        this.setCustomErrorMessage(message, condition);
+    }
+
+    @api processSearchResult(data) {
+        this.comboboxObj.options = this.prepareDropdownOptionList(deepClone(data));
+        this.comboboxObj.dropdownList = this.prepareDropdownOptionList(deepClone(data));
+        // reset the loading
+        this.comboboxObj.isLoading = false;
+    }
 
 // internal component logic
+
+    convertToObject(value) {
+        // check whether the supplied input is valid JSON array or not
+        let valueObj = new Array();
+        // not a valid JSON fallback to parse the string of comma seperated
+        const valueArray = value.split(SEPERATOR);
+        valueArray.forEach(element => {
+            valueObj.push({ label: '', value: element });
+        });
+        return valueObj
+    }
+
+    trimObject(val) {
+        if (Array.isArray(val)) { // check if it is array
+            if (val.length > 0) {
+                val.forEach(obj => {
+                    obj = this.trimObjectToValuePair(obj);
+                });
+            }
+        }
+        else {
+            obj = this.trimObjectToValuePair(obj);
+        }
+        return val;
+    }
+
+    trimObjectToValuePair(obj) {
+        for (let key in obj) {
+            if (!RESTRICT_OBJECT_KEYS.includes(key.toLocaleLowerCase())) {
+                delete obj[key];
+            }
+        }
+        return obj;
+    }
  
 connectedCallback(){
     //console.log('In Combobox connected Callback');
@@ -387,6 +492,39 @@ handleSelectionRemoval(event){
     handleSelectionRemovalAction(event,this);
 }
 
+    prepareSelectedValueList(options) {
+        const comboboxObj = this.comboboxObj;
+        for (let obj of options) {
+            obj._label = obj.label ? obj.label : '';
+            obj.value = obj.value ? obj.value : '';
+            //obj.selected = obj.selected ? obj.selected : false;
+            Object.defineProperty(obj, 'label', {
+                get() {
+                    let label = '';
+                    if (this._label) {
+                        label = this._label;
+                    }
+                    else {
+                        if (!comboboxObj.lazySearch) {
+                            const obj1 = comboboxObj.options.find(opt => opt.value.toString() === this.value.toString());
+                            if (obj1) {
+                                label = obj1.label;
+                            }
+                            else {
+                                label = this.value;
+                            }
+                        }
+                        else {
+                            label = this.value;
+                        }
+                    }
+                    return label;
+                }
+            });
+        }
+        return options;
+    }
+
 prepareDropdownOptionList(options){
     const comboboxObj = this.comboboxObj;
     for(let obj of options){
@@ -401,8 +539,8 @@ prepareDropdownOptionList(options){
         Object.defineProperty(obj, 'selected', {
             get(){
                 let val = false;
-                if(comboboxObj.value){
-                    val = comboboxObj.value.split(SEPERATOR).includes(this.value.toString());
+                if (comboboxObj._selectedValues.length > 0) {
+                    val = comboboxObj._value.split(SEPERATOR).includes(this.value.toString());
                 }
                 return val;
             }
@@ -455,7 +593,7 @@ customValidationRuleObj(dataObj){
 
 runValidationRules(){
     const errorObj = VALIDATION;
-    const value = this.comboboxObj.value;
+    const value = this.comboboxObj._value;
     if(errorObj && errorObj.length > 0){
         const filteredObj = errorObj.filter(error => { return this.comboboxObj._builtInValidation.includes(error.name) || error.custom});
         for (const error of filteredObj){
@@ -483,19 +621,37 @@ renderedCallback(){
     syncComboboxAttributes(this);
 }
 
-// dispatch events for the parent component
-dispatchChangeEvent(data){
-    if(this._connected){
-        const dataValue = data;
-        this.dispatchEvent(
-            new CustomEvent('change', {
-                composed: true,
-                bubbles: true,
-                detail: {
-                    value: dataValue
-                }
-            })
-        );
+    // dispatch events for the parent component
+    dispatchChangeEvent(data, dataObj) {
+        if (this._connected) {
+            const dataValue = data;
+            const dataValueObj = dataObj;
+            this.dispatchEvent(
+                new CustomEvent('change', {
+                    composed: true,
+                    bubbles: true,
+                    detail: {
+                        value: dataValue,
+                        valueObj: dataValueObj
+                    }
+                })
+            );
+        }
     }
-}
+
+    dispatchSearchEvent(searchText) {
+        if (this._connected) {
+            const dataValue = searchText;
+            this.dispatchEvent(
+                new CustomEvent('search', {
+                    composed: true,
+                    bubbles: true,
+                    detail: {
+                        value: dataValue
+                    }
+                })
+            );
+        }
+    }
+
 }
