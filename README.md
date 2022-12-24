@@ -12,8 +12,9 @@ This new LWC native Combobox supports and provides following features-
 1. **Native SLDS Support** - The component is written by using native Lightning design system styling, Thus the component will be rendered with the exact styling as described in the Combobox blueprint of SLDS,(https://www.lightningdesignsystem.com/components/combobox/)
 2. **Multiselect Options Support** - The native LWC Combobox only provides supports to the single selection, but this component extend that capbility and provide multiple selection with the native user experience of Combobox.
 3. **Auto-Search/Filter Options Support** - When dealing with large amount of data/options, it is essential to provide a intutive user experience where user can search and narrow-down the options and then select it in a quick fashion. This component provides that capability where you can enable the search the options and then select it. This capbility can be opt for Single/Multi selection of options.
-4. **Keyboard interface support for option selection/navigation** - The component supports native keyboard navigation and hanlder as per the Native LWC Combobox component(https://developer.salesforce.com/docs/component-library/bundle/lightning-combobox/example), This kind of user interface helps with the users who wants to use the Keyboard for selection and navigation of the options.
-5. **Native naming conventions** - The component is written by utilizing all the native base combobox attributes (https://developer.salesforce.com/docs/component-library/bundle/lightning-combobox/specification), methods and events, which helps any developer to easily integrate the component with their existing combobox code. 
+4. **Search capability with lazy-loading of Options** - The component supports real time search capability through `lazy-search` attribute, that allows searching of options directly through an API or Async opeartion. Combobox compoent will provide the searched query through `search` event where calling system/component can define the search capability for that keyword and provide the search result through `processSearchResult` method. 
+5. **Keyboard interface support for option selection/navigation** - The component supports native keyboard navigation and hanlder as per the Native LWC Combobox component(https://developer.salesforce.com/docs/component-library/bundle/lightning-combobox/example), This kind of user interface helps with the users who wants to use the Keyboard for selection and navigation of the options.
+6. **Native naming conventions** - The component is written by utilizing all the native base combobox attributes (https://developer.salesforce.com/docs/component-library/bundle/lightning-combobox/specification), methods and events, which helps any developer to easily integrate the component with their existing combobox code. 
 
 ## Demo
 1. Single Select without Search
@@ -24,7 +25,8 @@ This new LWC native Combobox supports and provides following features-
 ![Single Select with Search Image](/assets/Single_Select_with_Search.gif)
 4. Multiselect with Search
 ![Multiselect with Search Image](/assets/Multiselect_with_Search.gif)
-
+5. Select with Lazy-Search options
+![Select with Lazy Search Image](/assets/SelectWithLazySearch.gif)
 ## Usage
 Use the component by refering it in your LWC code, but before going to do that make sure your import all the necessary references from the `lwc` folder from repository.
 
@@ -44,13 +46,14 @@ This Combobox component comes with following supported attributes and Events and
 | `required` | No | To specify the Combobox required constraint  | `false` |
 | `disabled` | No | To specify the Combobox disable state, if `true` then the Combobox will be in disabled state  | `false` |
 | `read-only` | No | To specify the Combobox readonly state, if `true` then the Combobox will be in readonly state | `false` |
+| `lazy-search` | No | To specify the Combobox lazysearch functionality for options, if `true` then Combobox will pass the searched query through `search` event where calling component can subscribe to that event and define the search capability and provide the result back to the Combobox component through `processSearchResult` method | `false` |
 | `variant` | No | The variant changes the appearance of the combobox. Accepted variants include `standard`, `label-hidden`, `label-inline`. Use `label-hidden` to hide the label but make it available to assistive technology. Use `label-inline` to horizontally align the label and combobox. Use `standard` to place the label above the combobox as in stacked position.| `standard` |
 | `placeholder` | No | To display default placeholder on the Combobox, It accepts `string`.  |  |
 | `field-level-help` | No | To display help text for the Combobox field, the help text will be displayed in the format of tooltip. |  |
 | `validation` | No | To pass custom validation rules to execute for validation of input data, refer [Validation through validation Attribute](#validation-through-validation-attribute) section for more detail. |  |
 ### Supported Events
 Following Events are supported by the Combobox
-1. **`onchange` Event**:
+1. **`change` Event**:
 This event will be triggered whenever we update the Combobox selection. You can listen to this event from your parent component. To refer the updated value use `event.detail.value` from the `event` object.
   On your Parent Component listen to this event:
   ```
@@ -61,6 +64,18 @@ This event will be triggered whenever we update the Combobox selection. You can 
   <!-- in JS -->
   handleSelectChange(event){
       console.log('EVENT FIRED!!! Selected Value: '+event.detail.value);
+  }
+  ```
+2. **`search` Event**:
+This event is only available when you enable `lazy-search` option on Combobox, this event provide searched keyword/query which user typed to search the options on combobox. To refer the searched query/param the parent component need to refer `event.detail.value` object from `event` object.
+  ```
+  <!-- in HTML -->
+  <c-combobox label="Select List" lazy-search="true" options="{options}" onsearch={handleSearch}></c-combobox>
+  ```
+  ```
+  <!-- in JS -->
+  handleSearch(event){
+      console.log('Search Event Fired!!! Searched Value: '+event.detail.value);
   }
   ```
 ### Supported Methods
@@ -81,6 +96,9 @@ Following Methods are supported by the Combobox
   }
   ```
   For more information about validation through `setCustomValidity` method, refer [Validation through setCustomValidity method](#validation-through-setcustomvalidity-method) section.
+  
+3. **`processSearchResult` Method**:
+   This method is only applicable when `lazy-search` option is enabled(true), The parent component can use this method to process search result into the combobox component.
   
   #### Validation Handler Logic
   Component supports dynamic and custom validation through a specific js `object` and `setCustomValidity` method. You can prepare your custom validations and pass pass that `Array object` as in `validation` attribute or you can use `setCustomValidity` method and perform the validation dynamically on the fly from your parent component.
