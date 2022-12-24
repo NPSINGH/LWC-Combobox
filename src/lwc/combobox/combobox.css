@@ -10,13 +10,22 @@ div[aria-checked="false"] span.checked-icon lightning-icon {
     border-color: var(--slds-c-pill-error-text-color, var(--sds-c-pill-error-text-color, var(--lwc-colorTextError, rgb(234, 0, 30))))
 }
 
+.slds-has-error .slds-combobox__input-value {
+    border-color: var(--lwc-colorBorderError, rgb(234, 0, 30));
+    box-shadow: var(--lwc-colorBorderError, rgb(234, 0, 30)) 0 0 0 var(--lwc-borderWidthThin, 1px) inset;
+}
 .slds-has-error .slds-pill-customLabel {
     font-weight: 400 !important;
 }
-div.slds-pill_container li[aria-selected="true"] {
-    /* display: flex !important; */
-}
-
-div.slds-pill_container li[aria-selected="false"] {
-    /* display: none !important; */
+.loader {
+    border: 2px solid var(--lwc-brandLight);
+    border-radius: 50%;
+    border-top: 2px solid var(--lwc-brandPrimary);
+    width: 16px;
+    height: 16px;
+    -webkit-animation: spin 0.8s linear infinite;
+    /* Safari */
+    animation: spin 0.8s linear infinite;
+    display: inline-block;
+    vertical-align: middle;
 }
