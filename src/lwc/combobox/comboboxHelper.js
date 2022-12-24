@@ -25,7 +25,7 @@ export const openAndCloseDropdown = (opr = 'close',compObj)=>{
     let template = compObj.template;
     // check if the dropdown has any options or not
     const options =  template.querySelectorAll('div[role="option"]');
-    if(!(options && options.length > 0)){
+    if (!compObj.comboboxObj.lazySearch && !(options && options.length > 0)) {
         return;
     }
     let element =  template.querySelector('div[role="dropdown-trigger"');
@@ -49,7 +49,13 @@ export const openAndCloseDropdown = (opr = 'close',compObj)=>{
             compObj.comboboxObj._isDropdownVisibile = false;            
             compObj.comboboxObj._searchTerm = ''; // reset search term
             // reset the dropdown list 
-            compObj.comboboxObj.options = compObj.comboboxObj.dropdownList;
+            if (compObj.comboboxObj.lazySearch) {
+                compObj.comboboxObj.options = [];
+                compObj.comboboxObj.dropdownList = [];
+            }
+            else {
+                compObj.comboboxObj.options = compObj.comboboxObj.dropdownList;
+            }
             // remove highlighted option
             let listElements = template.querySelectorAll('div[role="option"]');
             if(listElements.length > 0){
@@ -163,6 +169,9 @@ export function clearSelectionOnAutocomplete(compObj){
 export function handleSelectionRemovalAction(event,compObj){
     const template = compObj.template;
     let value = event.target.dataset.value;
+    if (value && compObj.comboboxObj._selectedValues.length > 0) {
+        value = compObj.comboboxObj._selectedValues.find(opt => opt.value.toString() === value.toString());
+    }
     populateValueOnInput(value,compObj.comboboxObj); // send the value and update
 }
 
@@ -170,6 +179,9 @@ export function evaluateExpression(value, condition) {
     return (new Function('value', '"use strict";return (' + condition + ')' )(value));
 }
 
+export function compareArrayObject(array1, array2) {
+    return array1.length === array2.length && array1.every((o, idx) => objectsEqual(o, array2[idx]));
+}
 // -------------------------------------------------
 // Internal functions which no need to export
 // -------------------------------------------------
@@ -187,6 +199,13 @@ const eventKeyToHandlerMap = {
     Delete: handleBackspaceOrDeleteKey
 };
 
+function objectsEqual(o1, o2) {
+    return typeof o1 === 'object' && Object.keys(o1).length > 0
+        ? Object.keys(o1).length === Object.keys(o2).length
+        && Object.keys(o1).every(p => objectsEqual(o1[p], o2[p]))
+        : o1 === o2;
+}
+
 function resetDropdownOptions(template){
     const listElements = template.querySelectorAll('div[role="option"]');
     if(listElements.length > 0){ 
@@ -200,8 +219,11 @@ function resetDropdownOptions(template){
 }
 
 function populateValueOnInput(value, comboboxObj){
-    if(comboboxObj.value === value &&comboboxObj.multiselect){ // if multiselect and same value sent
-        value = '';
+    // if(comboboxObj.value === value &&comboboxObj.multiselect){ // if multiselect and same value sent
+    //     value = '';
+    // }
+    if (value && typeof value === 'string') {
+        value = comboboxObj.options.find(opt => opt.value.toString() === value.toString());
     }
     comboboxObj.value = value;
 }
@@ -228,8 +250,17 @@ function filterDropdownList(event,compObj){
     // get the value of the input
     const template = compObj.template;
     const searchTerm = event.target.value;
-    compObj.comboboxObj._searchTerm = searchTerm;
-    compObj.comboboxObj.options = compObj.comboboxObj.dropdownList.filter(ele => ele.label.toLowerCase().includes(searchTerm.toLowerCase()));
+    if (compObj.comboboxObj._searchTerm != searchTerm) {
+        compObj.comboboxObj._searchTerm = searchTerm;
+        if (compObj.comboboxObj.lazySearch) {
+            compObj.comboboxObj.isLoading = true;
+            // fire event for search 
+            compObj.dispatchSearchEvent(searchTerm);
+        }
+        else {
+            compObj.comboboxObj.options = compObj.comboboxObj.dropdownList.filter(ele => ele.label.toLowerCase().includes(searchTerm.toLowerCase()));
+        }
+    }
 }
 
 function findCurrentHoverIndex(template){
