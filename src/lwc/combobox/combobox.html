@@ -35,46 +35,46 @@
                             </template>
                             <template if:true={comboboxObj.autocomplete}>
                                 <template if:false={comboboxObj._clearMode}>
-                                    <span data-role="search"
-                                        class="slds-icon_container slds-input__icon slds-input__icon_right input-icon-container">
+                                    <span if:false={comboboxObj.isLoading} data-role="search" class="slds-icon_container slds-input__icon slds-input__icon_right input-icon-container">
                                         <lightning-button-icon tabindex="-1" disabled={comboboxObj.disabled} variant="bare" size="small"
                                             icon-name="utility:search" alternative-text="search" title="Type to filter">
                                         </lightning-button-icon>
-                                        </span>
-                                        </template>
-                                        <template if:true={comboboxObj._clearMode}>
-                                            <button tabindex="-1" data-role="clear"
-                                                class="slds-button slds-button_icon slds-input__icon slds-input__icon_right input-icon-container">
+                                    </span>
+                                    <span if:true={comboboxObj.isLoading} data-role="search" class="slds-icon_container slds-input__icon slds-input__icon_right input-icon-container">
+                                        <div class="loader"></div>
+                                    </span>
+                                </template>
+                                <template if:true={comboboxObj._clearMode}>
+                                    <button tabindex="-1" data-role="clear" class="slds-button slds-button_icon slds-input__icon slds-input__icon_right input-icon-container">
                                         <lightning-button-icon onclick={handleClearAction} disabled={comboboxObj.disabled} variant="bare" size="small"
                                             icon-name="utility:clear" alternative-text="clear" title="Clear the selection"></lightning-button-icon>
-                                        </button>
-                                        </template>
-                                        </template>
-                                        </div>
-                                        <div id={comboboxObj._listboxIdAttr} onscroll={handleListboxScroll} onmouseup={handleDropdownMouseUp}
-                                            onmousedown={handleDropdownMouseDown} class="slds-dropdown slds-dropdown_length-5 slds-dropdown_fluid"
-                                            role="listbox">
-                                            <ul class="slds-listbox slds-listbox_vertical" role="presentation">
-                                                <template for:each={comboboxObj.options} for:item="option" for:index="optIndex">
-                                                    <li role="presentation" key={option._id} class="slds-listbox__item">
-                                                        <div onclick={handleOptionClick} onmouseout={handleOptionHover} onmouseover={handleOptionHover}
-                                                            data-label={option.label} data-value={option.value} data-description={option.description} aria-selected="false"
-                                                            aria-checked={option.selected} id={option._id}
-                                                            class="slds-media slds-listbox__option slds-listbox__option_plain slds-media_small" role="option">
-                                                            <span class="slds-media__figure slds-listbox__option-icon checked-icon">
-                                                                <lightning-icon class="slds-current-color slds-hide"
-                                                    icon-name="utility:check" size="x-small"
-                                                    alternative-text="Selected">
-                                                </lightning-icon>
+                                    </button>
+                                </template>
+                            </template>
+                        </div>
+                        <div id={comboboxObj._listboxIdAttr} onscroll={handleListboxScroll} onmouseup={handleDropdownMouseUp}
+                            onmousedown={handleDropdownMouseDown} class="slds-dropdown slds-dropdown_length-5 slds-dropdown_fluid"
+                            role="listbox">
+                            <ul class="slds-listbox slds-listbox_vertical" role="presentation">
+                                <template for:each={comboboxObj.options} for:item="option" for:index="optIndex">
+                                    <li role="presentation" key={option._id} class="slds-listbox__item">
+                                        <div onclick={handleOptionClick} onmouseout={handleOptionHover} onmouseover={handleOptionHover}
+                                            data-label={option.label} data-value={option.value} data-description={option.description} aria-selected="false"
+                                            aria-checked={option.selected} id={option._id}
+                                            class="slds-media slds-listbox__option slds-listbox__option_plain slds-media_small" role="option">
+                                            <span class="slds-media__figure slds-listbox__option-icon checked-icon">
+                                                <lightning-icon class="slds-current-color slds-hide" icon-name="utility:check" size="x-small" alternative-text="Selected"></lightning-icon>
                                             </span>
                                             <span class="slds-media__body">
-                                                <span class="slds-truncate" data-value={option.value}
-                                                    title={option.label}>{option.label}</span>
+                                                <span class="slds-truncate" data-value={option.value} title={option.label}>{option.label}</span>
                                             </span>
                                         </div>
                                     </li>
                                 </template>
                             </ul>
+                            <div if:true={comboboxObj._showSearchText} class="emptyListContent slds-p-around_x-small">
+                                <span class="slds-truncate">{comboboxObj._defaultSearchText}</span>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -85,15 +85,15 @@
                     onclick={handlePillContainerClick} onmouseup={handleDropdownMouseUp} onmousedown={handleDropdownMouseDown}>
                     <ul class="slds-listbox slds-listbox_horizontal" role="listbox" aria-label="Selected Options:"
                         aria-orientation="horizontal" aria-describedby="listbox-pill-default">
-                        <template for:each={comboboxObj._selectedOptions} for:item="option" for:index="optIndex">
-                            <li key={option._id} data-id={option._id} data-label={option.label}
+                        <template for:each={comboboxObj._selectedValues} for:item="option" for:index="optIndex">
+                            <li key={option.value} data-id={option.value} data-label={option.label}
                                 data-value={option.value} class="slds-listbox-item cb-list-item" role="presentation"
                                 aria-selected="false">
                                 <span class="slds-pill" role="option">
-                                    <span class="slds-pill__label slds-pill-customLabel" data-id={option._id} data-value={option.value}
+                                    <span class="slds-pill__label slds-pill-customLabel" data-id={option.value} data-value={option.value}
                                         data-label={option.label} title={option.label}>{option.label}</span>
                                     <span class="slds-icon_container slds-pill__remove" title="Remove">
-                                        <lightning-button-icon id={option._id} data-id={option._id}
+                                        <lightning-button-icon id={option.value} data-id={option.value}
                                             data-label={option.label} data-value={option.value}
                                             onclick={handleSelectionRemoval} disabled={comboboxObj.disabled}
                                             variant="bare" size="small" icon-name="utility:close"
