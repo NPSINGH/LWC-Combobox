@@ -1,5 +1,5 @@
 import { LightningElement, track, api } from 'lwc';
-import {uniqueStrGenerator,deepClone,evaluateExpression,syncComboboxAttributes,handleSelectionRemovalAction,clearSelectionOnAutocomplete,handleKeyUpOnInput,handleOptionClickAction,handleOptionHoverAction,handleDropdownOnInputClick,handleKeyDownOnInput,openAndCloseDropdown,preventAndStopEvent} from './comboboxHelper';
+import {uniqueStrGenerator,deepClone,compareArrayObject,evaluateExpression,syncComboboxAttributes,handleSelectionRemovalAction,clearSelectionOnAutocomplete,handleKeyUpOnInput,handleOptionClickAction,handleOptionHoverAction,handleDropdownOnInputClick,handleKeyDownOnInput,openAndCloseDropdown,preventAndStopEvent} from './comboboxHelper';
 const SEPERATOR = ';',
     MAX_OPTION_DISPLAY = 3,
     DEFAULT_SEARCH_TEXT = "Start typing to search.",
