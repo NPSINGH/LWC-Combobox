@@ -81,7 +81,7 @@
             </template>
             <!-- multiselect value container for autocomplete search -->
             <template if:true={comboboxObj._showPillSelector}>
-                <div data-focus={comboboxObj._hasFocus} class="slds-pill_container multiple-selection-container"
+                <div data-value={value} data-focus={comboboxObj._hasFocus} class="slds-pill_container multiple-selection-container"
                     onclick={handlePillContainerClick} onmouseup={handleDropdownMouseUp} onmousedown={handleDropdownMouseDown}>
                     <ul class="slds-listbox slds-listbox_horizontal" role="listbox" aria-label="Selected Options:"
                         aria-orientation="horizontal" aria-describedby="listbox-pill-default">
