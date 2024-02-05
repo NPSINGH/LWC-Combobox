@@ -29,3 +29,8 @@ div[aria-checked="false"] span.checked-icon lightning-icon {
     display: inline-block;
     vertical-align: middle;
 }
+
+.multiple-selection-container {
+    max-height: 100px;
+    overflow-y: auto;
+}

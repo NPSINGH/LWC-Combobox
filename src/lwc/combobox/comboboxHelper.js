@@ -46,7 +46,7 @@ export const openAndCloseDropdown = (opr = 'close',compObj)=>{
             }
             // add the expend attribute as true
             element.setAttribute('aria-expanded','false');
-            compObj.comboboxObj._isDropdownVisibile = false;            
+            compObj.comboboxObj._isDropdownVisibile = false;
             compObj.comboboxObj._searchTerm = ''; // reset search term
             // reset the dropdown list 
             if (compObj.comboboxObj.lazySearch) {
@@ -70,8 +70,8 @@ export const openAndCloseDropdown = (opr = 'close',compObj)=>{
 }
 
 export const preventAndStopEvent = (event) => {
-    event.preventDefault();
-    event.stopPropagation();
+    event?.preventDefault();
+    event?.stopPropagation();
 }
 
 export function handleKeyDownOnInput(event,compObj) {
@@ -252,7 +252,7 @@ function filterDropdownList(event,compObj){
     const searchTerm = event.target.value;
     if (compObj.comboboxObj._searchTerm != searchTerm) {
         compObj.comboboxObj._searchTerm = searchTerm;
-        if (compObj.comboboxObj.lazySearch) {
+        if (compObj.comboboxObj.lazySearch && searchTerm.length >= 3) {
             compObj.comboboxObj.isLoading = true;
             // fire event for search 
             compObj.dispatchSearchEvent(searchTerm);
@@ -386,15 +386,17 @@ function removeHighlightSelection(template){
 }
 
 function scrollIntoViewIfNeeded(element, scrollingParent) {
-    const parentRect = scrollingParent.getBoundingClientRect();
-    const findMeRect = element.getBoundingClientRect();
-    if (findMeRect.top < parentRect.top) {
-        if (element.offsetTop + findMeRect.height < parentRect.height) {
-            scrollingParent.scrollTop = 0;
-        } else {
-            scrollingParent.scrollTop = element.offsetTop;
+    if(element){
+        const parentRect = scrollingParent.getBoundingClientRect();
+        const findMeRect = element.getBoundingClientRect();
+        if (findMeRect.top < parentRect.top) {
+            if (element.offsetTop + findMeRect.height < parentRect.height) {
+                scrollingParent.scrollTop = 0;
+            } else {
+                scrollingParent.scrollTop = element.offsetTop;
+            }
+        } else if (findMeRect.bottom > parentRect.bottom) {
+            scrollingParent.scrollTop += findMeRect.bottom - parentRect.bottom;
         }
-    } else if (findMeRect.bottom > parentRect.bottom) {
-        scrollingParent.scrollTop += findMeRect.bottom - parentRect.bottom;
     }
 }

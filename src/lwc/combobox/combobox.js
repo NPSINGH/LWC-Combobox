@@ -5,6 +5,9 @@ const SEPERATOR = ';',
     DEFAULT_SEARCH_TEXT = "Start typing to search.",
     NO_MATCH_FOUND = "No results for ",
     LOADING_TEXT = 'Please Wait...',
+    AUTOSEARCH_PLACEHOLDER = 'Search...',
+    MULTISELECT_PLACEHOLDER = 'Select Multiple Options',
+    SINGLESELECT_PLACEHOLDER = 'Select an Option',
     RESTRICT_OBJECT_KEYS = ['label', 'value', '_label'],
     VALIDATION = [{ name: "REQUIRED", condition: "(value === null || value === undefined || (typeof value === 'string' && value.trim() === '')) ? true : false", message: "Complete this field", custom: false }];
 export default class Combobox extends LightningElement {
@@ -25,7 +28,9 @@ uniqueId = uniqueStrGenerator(); // generate this Id to use in the attribute map
     dropdownList:[],
     lazySearch: false,
     isLoading: false,
+    validation: deepClone(VALIDATION),
 
+    _partialOptionLoad: false,
     _required: false,
     _hasFocus: false,
     _isDropdownVisibile: false,
@@ -47,7 +52,7 @@ uniqueId = uniqueStrGenerator(); // generate this Id to use in the attribute map
         return false;
     },
     get _defaultSearchText() {
-        return this.isLoading ? LOADING_TEXT : this._searchTerm ? NO_MATCH_FOUND + '"' + this._searchTerm + '"' : DEFAULT_SEARCH_TEXT;
+        return this.isLoading ? LOADING_TEXT : this._searchTerm &&  this._searchTerm.length >=3 ? NO_MATCH_FOUND + '"' + this._searchTerm + '"' : DEFAULT_SEARCH_TEXT;
     },
     get autocomplete() {
         return this._autocomplete || this.lazySearch;
@@ -126,10 +131,10 @@ uniqueId = uniqueStrGenerator(); // generate this Id to use in the attribute map
         let valueList = []; 
         if (!Array.isArray(val) || (Array.isArray(val) && val.length > 0)) {
             if (this._selectedValues.length > 0) {
-                if (this.multiselect) {
+                if (this.multiselect && !Array.isArray(val)) {
                     // search for the existing value if any
                     valueList = deepClone(this._selectedValues);
-                    const valueIndex = valueList.findIndex(ele => ele.value === val.value);
+                    const valueIndex = valueList.findIndex(ele => ele.value.toString() === val.value.toString());
                     if (valueIndex > -1) {
                         valueList.splice(valueIndex, 1); // splice the element
                     }
@@ -206,7 +211,7 @@ uniqueId = uniqueStrGenerator(); // generate this Id to use in the attribute map
         return this._cbLabelIdAttr + ' ' + this._cbSelectIdAttr;
     },
     get _placeholder(){
-        return this.placeholder ? this.placeholder : this.autocomplete ? 'Search...' : this.multiselect ? 'Select Multiple Options' : 'Select an Option';
+        return this.placeholder ? this.placeholder : this.autocomplete ? AUTOSEARCH_PLACEHOLDER : this.multiselect ? MULTISELECT_PLACEHOLDER : SINGLESELECT_PLACEHOLDER;
     },
     get _disableDropdown(){
         return this._clearMode ? true : false;
@@ -239,17 +244,16 @@ set name(value){
 }
 
 @api get validation(){
-    return VALIDATION;
+    return this.comboboxObj.validation;
 }
 set validation(value){
     if(typeof value === 'object' && value.length > 0){
         let rules = deepClone(value);
         this.prepareValidationRules(rules);
         // run the rules
-        this.runValidationRules();
-    }
-    else{
-        console.warn('An Empty object passed in Combobox[validation] attribute, please check the passed "validation" parameter');
+        if(this._connected){
+            this.runValidationRules();
+        }
     }
 }
 
@@ -309,6 +313,8 @@ set options(value){
         this.comboboxObj.dropdownList =  this.prepareDropdownOptionList(deepClone(value));
     }
     else{
+        this.comboboxObj.options = new Array();
+        this.comboboxObj.dropdownList = new Array();
         console.warn('An Empty object passed in Combobox[options] attribute, please check the passed "options" parameter');
     }
 }
@@ -366,7 +372,9 @@ set value(value){
         // not a valid JSON fallback to parse the string of comma seperated
         const valueArray = value.split(SEPERATOR);
         valueArray.forEach(element => {
-            valueObj.push({ label: '', value: element });
+            if (element) {
+                valueObj.push({ label: '', value: element });
+            }
         });
         return valueObj
     }
@@ -394,104 +402,117 @@ set value(value){
         return obj;
     }
  
-connectedCallback(){
-    //console.log('In Combobox connected Callback');
-    this._connected = true;
-}
-
-handleLabelClick(event){
-    this.comboboxObj._hasFocus = true;
-}
-
-handleInputFocus(event){
-    this.comboboxObj._hasFocus = true;
-}
-
-handleSelectInputBlur(event){
-    event.preventDefault();
-    event.stopPropagation();
-    if (this._cancelBlur) {
-        return;
+    connectedCallback(){
+        //console.log('In Combobox connected Callback');
+        if(!this.comboboxObj.lazySearch){ // if it is not a lazysearch
+            this.trimOptionList(); // trim options list to enahnce performance on page load
+        }
+        this._connected = true;
     }
-    this.comboboxObj._hasFocus = false;
-    this.runValidationRules();
-    openAndCloseDropdown('close',this);
-}
-
-handleOptionClick(event){
-    event.stopPropagation();
-    event.preventDefault();
-    handleOptionClickAction(event,this);
-}
-
-handleOptionHover(event){
-    event.stopPropagation();
-    event.preventDefault();
-    handleOptionHoverAction(event,this);
-}
-
-handleListboxScroll(event) {
-    event.stopPropagation();
-}
-
-handlePillContainerClick(event){
-    event.preventDefault();
-    event.stopPropagation();
-    this.comboboxObj._hasFocus = true;
-}
-
-handleInputKeyDown(event){
-    //console.log('In key press: '+event.key);
-    if(this.comboboxObj.readOnly || this.comboboxObj.disabled || (this.comboboxObj._disableDropdown && (event.key.toLowerCase() !== 'delete' && event.key.toLowerCase() !== 'backspace'))){
-        return;
+    renderedCallback(){
+        console.log('In rendered Callback  of Combobbox');
+        // sync the attributes
+        syncComboboxAttributes(this);
     }
-    handleKeyDownOnInput(event,this);
-}
 
-handleInputKeyUp(event){
-    //console.log(event);
-    if(this.comboboxObj.readOnly || this.comboboxObj.disabled || this.comboboxObj._disableDropdown){
-        return;
+    handleLabelClick(event){
+        this.comboboxObj._hasFocus = true;
     }
-    handleKeyUpOnInput(event,this);
-}
-
-handleInputClick(event){
-    // first need to check for readOnly and Disabled flag
-    event.stopPropagation();
-    event.preventDefault();
-    if(this.comboboxObj.readOnly || this.comboboxObj.disabled || this.comboboxObj._disableDropdown){
-        return;
+    
+    handleInputFocus(event){
+        this.comboboxObj._hasFocus = true;
+        if(!this.comboboxObj.lazySearch && this.comboboxObj._partialOptionLoad){
+            // load the option list with all options
+            this.comboboxObj.options = [...this.comboboxObj.dropdownList];
+            this.comboboxObj._partialOptionLoad = false; // all the options loaded so reset the flag
+        }
     }
-    handleDropdownOnInputClick(event,this);
-}
-
-handleDropdownMouseDown(event){
-    event.stopPropagation();
-    event.preventDefault();
-    const mainButton = 0;
-    if (event.button === mainButton) {
-        this._cancelBlur = true;
+    
+    handleSelectInputBlur(event){
+        event?.preventDefault();
+        event?.stopPropagation();
+        if (this._cancelBlur) {
+            return;
+        }
+        this.comboboxObj._hasFocus = false;
+        this.runValidationRules();
+        openAndCloseDropdown('close',this);
     }
-}
-
-handleClearAction(event){
-    preventAndStopEvent(event);
-    if(this.comboboxObj.autocomplete){
-        clearSelectionOnAutocomplete(this);
+    
+    handleOptionClick(event){
+        event?.stopPropagation();
+        event?.preventDefault();
+        handleOptionClickAction(event,this);
     }
-}
+    
+    handleOptionHover(event){
+        event?.stopPropagation();
+        event?.preventDefault();
+        handleOptionHoverAction(event,this);
+    }
+    
+    handleListboxScroll(event) {
+        event?.stopPropagation();
+    }
+    
+    handlePillContainerClick(event){
+        event?.preventDefault();
+        event?.stopPropagation();
+        this.comboboxObj._hasFocus = true;
+    }
 
-handleDropdownMouseUp(event) {
-    event.stopPropagation();
-    event.preventDefault();
-    this._cancelBlur=false;
-}
+    handleInputKeyDown(event){
+        //console.log('In key press: '+event.key);
+        if(this.comboboxObj.readOnly || this.comboboxObj.disabled || (this.comboboxObj._disableDropdown && (event.key.toLowerCase() !== 'delete' && event.key.toLowerCase() !== 'backspace'))){
+            return;
+        }
+        handleKeyDownOnInput(event,this);
+    }
+    
+    handleInputKeyUp(event){
+        //console.log(event);
+        if(this.comboboxObj.readOnly || this.comboboxObj.disabled || this.comboboxObj._disableDropdown){
+            return;
+        }
+        handleKeyUpOnInput(event,this);
+    }
 
-handleSelectionRemoval(event){
-    handleSelectionRemovalAction(event,this);
-}
+    handleInputClick(event){
+        // first need to check for readOnly and Disabled flag
+        event?.stopPropagation();
+        event?.preventDefault();
+        if(this.comboboxObj.readOnly || this.comboboxObj.disabled || this.comboboxObj._disableDropdown){
+            return;
+        }
+        handleDropdownOnInputClick(event,this);
+    }
+    
+    handleDropdownMouseDown(event){
+        event?.stopPropagation();
+        event?.preventDefault();
+        const mainButton = 0;
+        if (event.button === mainButton) {
+            this._cancelBlur = true;
+        }
+    }
 
+    handleClearAction(event){
+        preventAndStopEvent(event);
+        if(this.comboboxObj.autocomplete){
+            clearSelectionOnAutocomplete(this);
+        }
+    }
+    
+    handleDropdownMouseUp(event) {
+        event?.stopPropagation();
+        event?.preventDefault();
+        this._cancelBlur=false;
+    }
+
+    handleSelectionRemoval(event){
+        handleSelectionRemovalAction(event,this);
+    }
+    
     prepareSelectedValueList(options) {
         const comboboxObj = this.comboboxObj;
         for (let obj of options) {
@@ -506,7 +527,7 @@ handleSelectionRemoval(event){
                     }
                     else {
                         if (!comboboxObj.lazySearch) {
-                            const obj1 = comboboxObj.options.find(opt => opt.value.toString() === this.value.toString());
+                            const obj1 = comboboxObj.dropdownList.find(opt => opt.value.toString() === this.value.toString());
                             if (obj1) {
                                 label = obj1.label;
                             }
@@ -525,101 +546,109 @@ handleSelectionRemoval(event){
         return options;
     }
 
-prepareDropdownOptionList(options){
-    const comboboxObj = this.comboboxObj;
-    for(let obj of options){
-        obj.label = obj.label ? obj.label : '';
-        obj.value = obj.value ? obj.value : '';
-        obj.description = obj.description ? obj.description : '';
-        //obj.selected = obj.selected ? obj.selected : false;
-        // automated properties for dropdown options
-        Object.defineProperty(obj, '_id', {
-            value: uniqueStrGenerator()
-        });
-        Object.defineProperty(obj, 'selected', {
-            get(){
-                let val = false;
-                if (comboboxObj._selectedValues.length > 0) {
-                    val = comboboxObj._value.split(SEPERATOR).includes(this.value.toString());
+    prepareDropdownOptionList(options){
+        const comboboxObj = this.comboboxObj;
+        for(let obj of options){
+            obj.label = obj.label ? obj.label : '';
+            obj.value = obj.value ? obj.value : '';
+            obj.description = obj.description ? obj.description : '';
+            //obj.selected = obj.selected ? obj.selected : false;
+            // automated properties for dropdown options
+            Object.defineProperty(obj, '_id', {
+                value: uniqueStrGenerator()
+            });
+            Object.defineProperty(obj, 'selected', {
+                get(){
+                    let val = false;
+                    if (comboboxObj._selectedValues.length > 0) {
+                        val = comboboxObj._value.split(SEPERATOR).includes(this.value.toString());
+                    }
+                    return val;
                 }
-                return val;
-            }
-        });
-    }
-    return options;
-}
-
-setCustomErrorMessage(msg,cond){
-    let dataObj = {name:"_custom",condition:cond,message:msg,custom:true};
-    // search and find existing element with this name
-    const objIndex = VALIDATION.findIndex(obj => obj.name === dataObj.name);
-    if(objIndex > -1){
-        VALIDATION[objIndex] = dataObj;
-    }
-    else{
-        VALIDATION.push(dataObj);
+            });
+        }
+        return options;
     }
 
-    // run the validation rules
-    this.runValidationRules();
-}
-
-prepareValidationRules(ruleObj){
-    if(ruleObj && ruleObj.length > 0){
-        for (const rule of ruleObj){
-            if(rule.condition && rule.message){
-                const dataObj = this.customValidationRuleObj(rule);
-                const objIndex = VALIDATION.findIndex(obj => obj.name === dataObj.name);
-                // if an existing rule found replace it
-                if(objIndex > -1){
-                    VALIDATION[objIndex] = dataObj;
-                }
-                else{
-                    VALIDATION.push(dataObj);
+    trimOptionList(){
+        const allOptions = [...this.comboboxObj.dropdownList];
+        const selectedValues = this.comboboxObj._selectedValues;
+        if(selectedValues != null && selectedValues.length > 0){
+            const partialOptions = allOptions.filter(optionItem =>
+                selectedValues.some(seledtedOption => seledtedOption.value === optionItem.value)
+            );
+            this.comboboxObj.options = partialOptions;
+        }
+        this.comboboxObj._partialOptionLoad = true;
+    }
+    
+    setCustomErrorMessage(msg,cond){
+        let dataObj = {name:"_custom",condition:cond,message:msg,custom:true};
+        // search and find existing element with this name
+        const objIndex = this.comboboxObj.validation.findIndex(obj => obj.name === dataObj.name);
+        if(objIndex > -1){
+            this.comboboxObj.validation[objIndex] = dataObj;
+        }
+        else{
+            this.comboboxObj.validation.push(dataObj);
+        }
+    
+        // run the validation rules
+        this.runValidationRules();
+    }
+    
+    prepareValidationRules(ruleObj){
+        if(ruleObj && ruleObj.length > 0){
+            for (const rule of ruleObj){
+                if(rule.condition && rule.message){
+                    const dataObj = this.customValidationRuleObj(rule);
+                    const objIndex = this.comboboxObj.validation.findIndex(obj => obj.name === dataObj.name);
+                    // if an existing rule found replace it
+                    if(objIndex > -1){
+                        this.comboboxObj.validation[objIndex] = dataObj;
+                    }
+                    else{
+                        this.comboboxObj.validation.push(dataObj);
+                    }
                 }
             }
         }
     }
-}
 
-customValidationRuleObj(dataObj){
-    let ruleObj = {};
-    ruleObj.name = ('name' in dataObj) ? dataObj.name ? dataObj.name : uniqueStrGenerator() : uniqueStrGenerator();
-    ruleObj.condition = dataObj.condition;
-    ruleObj.message = dataObj.message;
-    ruleObj.custom = true;
-    return ruleObj;
-}
-
-runValidationRules(){
-    const errorObj = VALIDATION;
-    const value = this.comboboxObj._value;
-    if(errorObj && errorObj.length > 0){
-        const filteredObj = errorObj.filter(error => { return this.comboboxObj._builtInValidation.includes(error.name) || error.custom});
-        for (const error of filteredObj){
-            if(evaluateExpression(value,error.condition)){
-                let hasError = error.message ? true : false;
-                this.comboboxObj.hasError = hasError;
-                this.comboboxObj.errorMsg = error.message;
-                if(hasError){
-                    return this.comboboxObj.hasError;
-                }
-            }
-            else{
-                this.comboboxObj.hasError = false;
-                this.comboboxObj.errorMsg = '';
-            }
-        };
+    customValidationRuleObj(dataObj){
+        let ruleObj = {};
+        ruleObj.name = ('name' in dataObj) ? dataObj.name ? dataObj.name : uniqueStrGenerator() : uniqueStrGenerator();
+        ruleObj.condition = dataObj.condition;
+        ruleObj.message = dataObj.message;
+        ruleObj.custom = true;
+        return ruleObj;
     }
-    return this.comboboxObj.hasError;
-}
 
-
-renderedCallback(){
-    // console.log('In rendered Callback  of Combobbox');
-    // sync the attributes 
-    syncComboboxAttributes(this);
-}
+    runValidationRules(){
+        const errorObj = this.comboboxObj.validation;
+        const value = this.comboboxObj._value;
+        //reset the error object
+        this.comboboxObj.hasError = false;
+        this.comboboxObj.errorMsg = '';
+        if(errorObj && errorObj.length > 0){
+            const filteredObj = errorObj.filter(error => { return this.comboboxObj._builtInValidation.includes(error.name) || error.custom});
+            for (const error of filteredObj){
+                if(evaluateExpression(value,error.condition)){
+                    let hasError = error.message ? true : false;
+                    this.comboboxObj.hasError = hasError;
+                    this.comboboxObj.errorMsg = error.message;
+                    if(hasError){
+                        return this.comboboxObj.hasError;
+                    }
+                }
+                else{
+                    this.comboboxObj.hasError = false;
+                    this.comboboxObj.errorMsg = '';
+                }
+            };
+        }
+        return this.comboboxObj.hasError;
+    }
 
     // dispatch events for the parent component
     dispatchChangeEvent(data, dataObj) {
@@ -638,7 +667,7 @@ renderedCallback(){
             );
         }
     }
-
+    
     dispatchSearchEvent(searchText) {
         if (this._connected) {
             const dataValue = searchText;
